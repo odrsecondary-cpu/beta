@@ -27,6 +27,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  final _mapController = MapController();
   LatLng? _currentLocation;
   bool _loading = true;
   String? _errorMessage;
@@ -102,32 +103,62 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return Scaffold(
-      body: FlutterMap(
-        options: MapOptions(
-          initialCenter: _currentLocation!,
-          initialZoom: 15.0,
-        ),
+      body: Stack(
         children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'io.beta.beta',
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: _currentLocation!,
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_pin,
-                  color: Colors.red,
-                  size: 40,
-                ),
+          FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: _currentLocation!,
+              initialZoom: 15.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'io.beta.beta',
+              ),
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: _currentLocation!,
+                    width: 40,
+                    height: 40,
+                    child: const Icon(
+                      Icons.location_pin,
+                      color: Colors.red,
+                      size: 40,
+                    ),
+                  ),
+                ],
+              ),
+              const SimpleAttributionWidget(
+                source: Text('© OpenStreetMap contributors'),
               ),
             ],
           ),
-          const SimpleAttributionWidget(
-            source: Text('© OpenStreetMap contributors'),
+          Positioned(
+            right: 16,
+            bottom: 32,
+            child: Column(
+              children: [
+                FloatingActionButton.small(
+                  heroTag: 'zoom_in',
+                  onPressed: () => _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom + 1,
+                  ),
+                  child: const Icon(Icons.add),
+                ),
+                const SizedBox(height: 8),
+                FloatingActionButton.small(
+                  heroTag: 'zoom_out',
+                  onPressed: () => _mapController.move(
+                    _mapController.camera.center,
+                    _mapController.camera.zoom - 1,
+                  ),
+                  child: const Icon(Icons.remove),
+                ),
+              ],
+            ),
           ),
         ],
       ),
