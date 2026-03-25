@@ -67,6 +67,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     );
   }
 
+  void _centerOnPin() {
+    _mapController.move(_currentLocation!, _mapController.camera.zoom);
+  }
+
   void _animateZoom(double delta) {
     _zoomTween = Tween<double>(
       begin: _mapController.camera.zoom,
@@ -180,6 +184,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             bottom: 32,
             child: Column(
               children: [
+                FloatingActionButton.small(
+                  heroTag: 'center_pin',
+                  onPressed: _centerOnPin,
+                  child: const Icon(Icons.my_location),
+                ),
+                const SizedBox(height: 8),
                 FloatingActionButton.small(
                   heroTag: 'zoom_in',
                   onPressed: () => _animateZoom(1),

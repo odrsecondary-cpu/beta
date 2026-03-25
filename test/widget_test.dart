@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
@@ -77,6 +78,44 @@ void main() {
 
     expect(find.text('Location permission denied.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('should show center pin button after location loads',
+      (tester) async {
+    when(() => mockGeolocator.checkPermission())
+        .thenAnswer((_) async => LocationPermission.always);
+    when(() => mockGeolocator.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        )).thenAnswer((_) async => _fakePosition());
+
+    await tester.pumpWidget(const MyApp());
+    await tester.pump();
+
+    expect(find.byIcon(Icons.my_location), findsOneWidget);
+  });
+
+  testWidgets('should center map on pin location when center button is tapped',
+      (tester) async {
+    final mapController = MapController();
+    when(() => mockGeolocator.checkPermission())
+        .thenAnswer((_) async => LocationPermission.always);
+    when(() => mockGeolocator.getCurrentPosition(
+          locationSettings: any(named: 'locationSettings'),
+        )).thenAnswer((_) async => _fakePosition());
+
+    await tester.pumpWidget(
+      MaterialApp(home: MapScreen(mapController: mapController)),
+    );
+    await tester.pump();
+
+    // Pan away from the pin.
+    mapController.move(const LatLng(0, 0), mapController.camera.zoom);
+
+    await tester.tap(find.byIcon(Icons.my_location));
+    await tester.pump();
+
+    expect(mapController.camera.center.latitude, closeTo(37.4219983, 0.0001));
+    expect(mapController.camera.center.longitude, closeTo(-122.084, 0.0001));
   });
 
   group('zoom animation', () {
