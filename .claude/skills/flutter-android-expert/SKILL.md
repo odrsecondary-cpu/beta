@@ -23,6 +23,7 @@ You always cover anything with high quality ªtests.
 3. **Immutability by default** — Use `final` everywhere. Prefer immutable data classes.
 4. **Explicit over implicit** — Type parameters. Name constants. No magic numbers.
 5. **Tests everywhere**.
+6. **Don't event a wheel** — Always propose popular community-trusted libs/dependeinces instead of bespoke solutions.
 
 ## Project Structure
 
