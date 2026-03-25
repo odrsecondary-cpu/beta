@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
@@ -76,5 +77,65 @@ void main() {
 
     expect(find.text('Location permission denied.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  group('zoom animation', () {
+    void mockLocationGranted() {
+      when(() => mockGeolocator.checkPermission())
+          .thenAnswer((_) async => LocationPermission.always);
+      when(() => mockGeolocator.getCurrentPosition(
+            locationSettings: any(named: 'locationSettings'),
+          )).thenAnswer((_) async => _fakePosition());
+    }
+
+    testWidgets('should complete zoom in to initial zoom plus one',
+        (tester) async {
+      final mapController = MapController();
+      mockLocationGranted();
+
+      await tester.pumpWidget(
+        MaterialApp(home: MapScreen(mapController: mapController)),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      expect(mapController.camera.zoom, equals(16.0));
+    });
+
+    testWidgets('should complete zoom out to initial zoom minus one',
+        (tester) async {
+      final mapController = MapController();
+      mockLocationGranted();
+
+      await tester.pumpWidget(
+        MaterialApp(home: MapScreen(mapController: mapController)),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.remove));
+      await tester.pumpAndSettle();
+
+      expect(mapController.camera.zoom, equals(14.0));
+    });
+
+    testWidgets('should not reach final zoom instantly when zooming in',
+        (tester) async {
+      final mapController = MapController();
+      mockLocationGranted();
+
+      await tester.pumpWidget(
+        MaterialApp(home: MapScreen(mapController: mapController)),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pump(); // register first animation tick at t=0
+      await tester.pump(const Duration(milliseconds: 150)); // advance to halfway through animation
+
+      expect(mapController.camera.zoom, greaterThan(15.0));
+      expect(mapController.camera.zoom, lessThan(16.0));
+    });
   });
 }

@@ -20,22 +20,62 @@ class MyApp extends StatelessWidget {
 }
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({super.key, this.mapController});
+
+  final MapController? mapController;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
-  final _mapController = MapController();
+class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+  late final MapController _mapController;
   LatLng? _currentLocation;
   bool _loading = true;
   String? _errorMessage;
 
+  late final AnimationController _zoomAnimController;
+  late final Animation<double> _zoomAnim;
+  var _zoomTween = Tween<double>(begin: 15, end: 15);
+
   @override
   void initState() {
     super.initState();
+    _mapController = widget.mapController ?? MapController();
+    _zoomAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _zoomAnim = CurvedAnimation(
+      parent: _zoomAnimController,
+      curve: Curves.easeInOut,
+    );
+    _zoomAnim.addListener(_onZoomAnim);
     _determinePosition();
+  }
+
+  @override
+  void dispose() {
+    _zoomAnimController.dispose();
+    super.dispose();
+  }
+
+  void _onZoomAnim() {
+    _mapController.move(
+      _mapController.camera.center,
+      _zoomTween.transform(_zoomAnim.value),
+    );
+  }
+
+  void _animateZoom(double delta) {
+    _zoomTween = Tween<double>(
+      begin: _mapController.camera.zoom,
+      end: _mapController.camera.zoom + delta,
+    );
+    _zoomAnimController
+      ..stop()
+      ..reset()
+      ..forward();
   }
 
   Future<void> _determinePosition() async {
@@ -142,19 +182,13 @@ class _MapScreenState extends State<MapScreen> {
               children: [
                 FloatingActionButton.small(
                   heroTag: 'zoom_in',
-                  onPressed: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom + 1,
-                  ),
+                  onPressed: () => _animateZoom(1),
                   child: const Icon(Icons.add),
                 ),
                 const SizedBox(height: 8),
                 FloatingActionButton.small(
                   heroTag: 'zoom_out',
-                  onPressed: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom - 1,
-                  ),
+                  onPressed: () => _animateZoom(-1),
                   child: const Icon(Icons.remove),
                 ),
               ],
