@@ -1,0 +1,51 @@
+# Build outputs
+build/
+.dart_tool/
+
+# Android build
+android/.gradle/
+android/app/build/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/
+android/key.properties
+
+# iOS (not used, but Flutter generates it)
+ios/
+
+# Other platforms (not used, but Flutter may generate them)
+web/
+linux/
+macos/
+windows/
+
+# Dependencies
+.pub-cache/
+.pub/
+pubspec.lock
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Generated files
+*.g.dart
+*.freezed.dart
+**/GeneratedPluginRegistrant.*
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Binary/secret files
+*.jks
+*.keystore
+
+# Assets (binary)
+assets/
+
+# Coverage
+coverage/
+
+# GitHub Actions logs
+.github/workflows/*.log
