@@ -38,12 +38,12 @@ void main() {
 
   testWidgets('should show loading indicator while fetching location',
       (tester) async {
-    // Never completes during the test — keeps the screen in loading state.
+    // Never emits during the test — keeps the screen in loading state.
     when(() => mockGeolocator.checkPermission())
         .thenAnswer((_) => Future.value(LocationPermission.always));
-    when(() => mockGeolocator.getCurrentPosition(
+    when(() => mockGeolocator.getPositionStream(
           locationSettings: any(named: 'locationSettings'),
-        )).thenAnswer((_) => Completer<Position>().future);
+        )).thenAnswer((_) => StreamController<Position>().stream);
 
     await tester.pumpWidget(const MyApp());
 
@@ -54,9 +54,9 @@ void main() {
       (tester) async {
     when(() => mockGeolocator.checkPermission())
         .thenAnswer((_) async => LocationPermission.always);
-    when(() => mockGeolocator.getCurrentPosition(
+    when(() => mockGeolocator.getPositionStream(
           locationSettings: any(named: 'locationSettings'),
-        )).thenAnswer((_) async => _fakePosition());
+        )).thenAnswer((_) => Stream.value(_fakePosition()));
 
     await tester.pumpWidget(const MyApp());
     // Resolve the location future and trigger one rebuild.
@@ -84,9 +84,9 @@ void main() {
       (tester) async {
     when(() => mockGeolocator.checkPermission())
         .thenAnswer((_) async => LocationPermission.always);
-    when(() => mockGeolocator.getCurrentPosition(
+    when(() => mockGeolocator.getPositionStream(
           locationSettings: any(named: 'locationSettings'),
-        )).thenAnswer((_) async => _fakePosition());
+        )).thenAnswer((_) => Stream.value(_fakePosition()));
 
     await tester.pumpWidget(const MyApp());
     await tester.pump();
@@ -99,9 +99,9 @@ void main() {
     final mapController = MapController();
     when(() => mockGeolocator.checkPermission())
         .thenAnswer((_) async => LocationPermission.always);
-    when(() => mockGeolocator.getCurrentPosition(
+    when(() => mockGeolocator.getPositionStream(
           locationSettings: any(named: 'locationSettings'),
-        )).thenAnswer((_) async => _fakePosition());
+        )).thenAnswer((_) => Stream.value(_fakePosition()));
 
     await tester.pumpWidget(
       MaterialApp(home: MapScreen(mapController: mapController)),
@@ -122,9 +122,9 @@ void main() {
     void mockLocationGranted() {
       when(() => mockGeolocator.checkPermission())
           .thenAnswer((_) async => LocationPermission.always);
-      when(() => mockGeolocator.getCurrentPosition(
+      when(() => mockGeolocator.getPositionStream(
             locationSettings: any(named: 'locationSettings'),
-          )).thenAnswer((_) async => _fakePosition());
+          )).thenAnswer((_) => Stream.value(_fakePosition()));
     }
 
     testWidgets('should complete zoom in to initial zoom plus one',

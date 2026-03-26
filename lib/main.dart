@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -33,6 +35,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   LatLng? _currentLocation;
   bool _loading = true;
   String? _errorMessage;
+  StreamSubscription<Position>? _positionSubscription;
 
   late final AnimationController _zoomAnimController;
   late final Animation<double> _zoomAnim;
@@ -56,6 +59,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
+    _positionSubscription?.cancel();
     _zoomAnimController.dispose();
     super.dispose();
   }
@@ -88,6 +92,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       _errorMessage = null;
     });
 
+    await _positionSubscription?.cancel();
+    _positionSubscription = null;
+
     try {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
@@ -102,16 +109,24 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition(
+      _positionSubscription = Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
         ),
+      ).listen(
+        (position) {
+          setState(() {
+            _currentLocation = LatLng(position.latitude, position.longitude);
+            _loading = false;
+          });
+        },
+        onError: (Object e) {
+          setState(() {
+            _errorMessage = 'Could not get location: $e';
+            _loading = false;
+          });
+        },
       );
-
-      setState(() {
-        _currentLocation = LatLng(position.latitude, position.longitude);
-        _loading = false;
-      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Could not get location: $e';
