@@ -118,6 +118,40 @@ void main() {
     expect(mapController.camera.center.longitude, closeTo(-122.084, 0.0001));
   });
 
+  testWidgets('should draw route polyline after multiple location updates',
+      (tester) async {
+    final controller = StreamController<Position>();
+    when(() => mockGeolocator.checkPermission())
+        .thenAnswer((_) async => LocationPermission.always);
+    when(() => mockGeolocator.getPositionStream(
+          locationSettings: any(named: 'locationSettings'),
+        )).thenAnswer((_) => controller.stream);
+
+    await tester.pumpWidget(const MyApp());
+
+    controller.add(_fakePosition());
+    await tester.pump();
+
+    controller.add(Position(
+      latitude: 37.4229983,
+      longitude: -122.084,
+      timestamp: DateTime.now(),
+      accuracy: 5.0,
+      altitude: 0.0,
+      heading: 0.0,
+      speed: 0.0,
+      speedAccuracy: 0.0,
+      altitudeAccuracy: 0.0,
+      headingAccuracy: 0.0,
+    ));
+    await tester.pump();
+
+    expect(find.byType(PolylineLayer), findsOneWidget);
+
+    await tester.pumpAndSettle();
+    await controller.close();
+  });
+
   group('location animation', () {
     testWidgets('should animate marker position when location updates',
         (tester) async {

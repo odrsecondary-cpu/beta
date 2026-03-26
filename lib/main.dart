@@ -44,6 +44,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late final MapController _mapController;
   LatLng? _currentLocation;
   LatLng? _displayedLocation;
+  final List<LatLng> _routePoints = [];
   bool _loading = true;
   String? _errorMessage;
   StreamSubscription<Position>? _positionSubscription;
@@ -121,6 +122,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _animateToLocation(LatLng newLocation) {
+    if (_displayedLocation != null) {
+      setState(() => _routePoints.add(_displayedLocation!));
+    }
     _locationTween = _LatLngTween(
       begin: _displayedLocation ?? newLocation,
       end: newLocation,
@@ -135,6 +139,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() {
       _loading = true;
       _errorMessage = null;
+      _routePoints.clear();
     });
 
     await _positionSubscription?.cancel();
@@ -223,6 +228,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'io.beta.beta',
+              ),
+              PolylineLayer(
+                polylines: [
+                  if (_routePoints.isNotEmpty && _displayedLocation != null)
+                    Polyline(
+                      points: [..._routePoints, _displayedLocation!],
+                      strokeWidth: 4,
+                      color: Colors.blue.withValues(alpha: 0.7),
+                    ),
+                ],
               ),
               MarkerLayer(
                 markers: [
