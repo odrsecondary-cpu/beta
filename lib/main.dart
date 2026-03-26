@@ -21,6 +21,16 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class _LatLngTween extends Tween<LatLng> {
+  _LatLngTween({required super.begin, required super.end});
+
+  @override
+  LatLng lerp(double t) => LatLng(
+        begin!.latitude + (end!.latitude - begin!.latitude) * t,
+        begin!.longitude + (end!.longitude - begin!.longitude) * t,
+      );
+}
+
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.mapController});
 
@@ -30,9 +40,10 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late final MapController _mapController;
   LatLng? _currentLocation;
+  LatLng? _displayedLocation;
   bool _loading = true;
   String? _errorMessage;
   StreamSubscription<Position>? _positionSubscription;
@@ -41,10 +52,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   late final Animation<double> _zoomAnim;
   var _zoomTween = Tween<double>(begin: 15, end: 15);
 
+  late final AnimationController _locationAnimController;
+  var _locationTween = _LatLngTween(
+    begin: const LatLng(0, 0),
+    end: const LatLng(0, 0),
+  );
+
   @override
   void initState() {
     super.initState();
     _mapController = widget.mapController ?? MapController();
+
     _zoomAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -54,6 +72,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       curve: Curves.easeInOut,
     );
     _zoomAnim.addListener(_onZoomAnim);
+
+    _locationAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _locationAnimController.addListener(_onLocationAnim);
+
     _determinePosition();
   }
 
@@ -61,6 +86,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   void dispose() {
     _positionSubscription?.cancel();
     _zoomAnimController.dispose();
+    _locationAnimController.dispose();
     super.dispose();
   }
 
@@ -69,6 +95,14 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       _mapController.camera.center,
       _zoomTween.transform(_zoomAnim.value),
     );
+  }
+
+  void _onLocationAnim() {
+    setState(() {
+      _displayedLocation = _locationTween.lerp(
+        Curves.easeInOut.transform(_locationAnimController.value),
+      );
+    });
   }
 
   void _centerOnPin() {
@@ -81,6 +115,17 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       end: _mapController.camera.zoom + delta,
     );
     _zoomAnimController
+      ..stop()
+      ..reset()
+      ..forward();
+  }
+
+  void _animateToLocation(LatLng newLocation) {
+    _locationTween = _LatLngTween(
+      begin: _displayedLocation ?? newLocation,
+      end: newLocation,
+    );
+    _locationAnimController
       ..stop()
       ..reset()
       ..forward();
@@ -115,10 +160,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         ),
       ).listen(
         (position) {
+          final newLocation = LatLng(position.latitude, position.longitude);
           setState(() {
-            _currentLocation = LatLng(position.latitude, position.longitude);
+            _currentLocation = newLocation;
             _loading = false;
           });
+          _animateToLocation(newLocation);
         },
         onError: (Object e) {
           setState(() {
@@ -161,6 +208,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       );
     }
 
+    final markerLocation = _displayedLocation ?? _currentLocation!;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -178,7 +227,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               MarkerLayer(
                 markers: [
                   Marker(
-                    point: _currentLocation!,
+                    point: markerLocation,
                     width: 20,
                     height: 20,
                     child: Container(

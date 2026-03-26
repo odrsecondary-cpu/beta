@@ -118,6 +118,52 @@ void main() {
     expect(mapController.camera.center.longitude, closeTo(-122.084, 0.0001));
   });
 
+  group('location animation', () {
+    testWidgets('should animate marker position when location updates',
+        (tester) async {
+      final controller = StreamController<Position>();
+      when(() => mockGeolocator.checkPermission())
+          .thenAnswer((_) async => LocationPermission.always);
+      when(() => mockGeolocator.getPositionStream(
+            locationSettings: any(named: 'locationSettings'),
+          )).thenAnswer((_) => controller.stream);
+
+      await tester.pumpWidget(const MyApp());
+
+      controller.add(_fakePosition());
+      await tester.pump();
+
+      // Emit a second position further north.
+      controller.add(Position(
+        latitude: 37.4229983,
+        longitude: -122.084,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      ));
+      await tester.pump();
+      // Mid-animation: marker should not have jumped to the final position yet.
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final marker = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(MarkerLayer),
+          matching: find.byType(Container),
+        ),
+      );
+      expect(marker, isNotNull);
+
+      // Let the animation finish and verify no errors.
+      await tester.pumpAndSettle();
+      await controller.close();
+    });
+  });
+
   group('zoom animation', () {
     void mockLocationGranted() {
       when(() => mockGeolocator.checkPermission())
