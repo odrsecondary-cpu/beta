@@ -250,9 +250,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              const SimpleAttributionWidget(
-                source: Text('© OpenStreetMap contributors'),
-              ),
             ],
           ),
           Positioned(
