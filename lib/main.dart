@@ -227,7 +227,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             children: [
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'io.beta.beta',
+                userAgentPackageName: 'io.beta',
               ),
               PolylineLayer(
                 polylines: [
