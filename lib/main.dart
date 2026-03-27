@@ -405,6 +405,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                               color: Colors.blue,
                             ),
                           ),
+                          Text(
+                            _formatDuration(_elapsedSeconds),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ],
