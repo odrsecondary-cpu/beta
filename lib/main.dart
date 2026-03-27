@@ -154,12 +154,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       _showResult = false;
       _activityDistanceMeters = 0.0;
       _routePoints.clear();
+      if (_displayedLocation != null) _routePoints.add(_displayedLocation!);
     });
   }
 
   void _stopRecording() {
     _recordingTimer?.cancel();
     _recordingTimer = null;
+    if (_displayedLocation != null) {
+      _routePoints.add(_displayedLocation!);
+    }
     setState(() {
       _isRecording = false;
       _showResult = true;
@@ -290,14 +294,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 userAgentPackageName: 'io.beta',
               ),
               PolylineLayer(
-                polylines: [
-                  if (_routePoints.isNotEmpty && _displayedLocation != null && _isRecording)
+                polylines: () {
+                  final points = _isRecording && _displayedLocation != null
+                      ? [..._routePoints, _displayedLocation!]
+                      : List<LatLng>.from(_routePoints);
+                  if (points.length < 2) return <Polyline>[];
+                  return [
                     Polyline(
-                      points: [..._routePoints, _displayedLocation!],
+                      points: points,
                       strokeWidth: 4,
                       color: Colors.blue.withValues(alpha: 0.7),
                     ),
-                ],
+                  ];
+                }(),
               ),
               MarkerLayer(
                 markers: [
