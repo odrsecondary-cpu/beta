@@ -49,6 +49,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   String? _errorMessage;
   StreamSubscription<Position>? _positionSubscription;
 
+  bool _isRecording = false;
+  bool _showResult = false;
+  double _activityDistanceMeters = 0.0;
+
+  static const _geoDistance = Distance();
+
   late final AnimationController _zoomAnimController;
   late final Animation<double> _zoomAnim;
   var _zoomTween = Tween<double>(begin: 15, end: 15);
@@ -122,7 +128,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _animateToLocation(LatLng newLocation) {
-    if (_displayedLocation != null) {
+    if (_displayedLocation != null && _isRecording) {
       setState(() => _routePoints.add(_displayedLocation!));
     }
     _locationTween = _LatLngTween(
@@ -133,6 +139,37 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       ..stop()
       ..reset()
       ..forward();
+  }
+
+  void _startRecording() {
+    setState(() {
+      _isRecording = true;
+      _showResult = false;
+      _activityDistanceMeters = 0.0;
+      _routePoints.clear();
+    });
+  }
+
+  void _stopRecording() {
+    setState(() {
+      _isRecording = false;
+      _showResult = true;
+    });
+  }
+
+  void _onRecordButtonPressed() {
+    if (_isRecording) {
+      _stopRecording();
+    } else {
+      _startRecording();
+    }
+  }
+
+  String _formatDistance(double meters) {
+    if (meters >= 1000) {
+      return '${(meters / 1000).toStringAsFixed(2)} km';
+    }
+    return '${meters.toStringAsFixed(0)} m';
   }
 
   Future<void> _determinePosition() async {
@@ -167,6 +204,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
         (position) {
           final newLocation = LatLng(position.latitude, position.longitude);
           setState(() {
+            if (_isRecording && _currentLocation != null) {
+              _activityDistanceMeters +=
+                  _geoDistance(_currentLocation!, newLocation);
+            }
             _currentLocation = newLocation;
             _loading = false;
           });
@@ -231,7 +272,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
               PolylineLayer(
                 polylines: [
-                  if (_routePoints.isNotEmpty && _displayedLocation != null)
+                  if (_routePoints.isNotEmpty && _displayedLocation != null && _isRecording)
                     Polyline(
                       points: [..._routePoints, _displayedLocation!],
                       strokeWidth: 4,
@@ -267,6 +308,82 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
+          if (_isRecording)
+            Positioned(
+              top: 48,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.fiber_manual_record,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'REC  ${_formatDistance(_activityDistanceMeters)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          if (_showResult)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 100,
+              child: Card(
+                elevation: 8,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.route, color: Colors.blue, size: 28),
+                      const SizedBox(width: 12),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Activity Complete',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            _formatDistance(_activityDistanceMeters),
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Positioned(
             right: 16,
             bottom: 32,
@@ -290,6 +407,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                   child: const Icon(Icons.remove),
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            left: 16,
+            bottom: 32,
+            child: FloatingActionButton(
+              heroTag: 'record',
+              backgroundColor: _isRecording ? Colors.red : Colors.green,
+              onPressed: _onRecordButtonPressed,
+              child: Icon(
+                _isRecording ? Icons.stop : Icons.play_arrow,
+                color: Colors.white,
+              ),
             ),
           ),
         ],

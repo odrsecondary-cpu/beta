@@ -198,6 +198,163 @@ void main() {
     });
   });
 
+  group('activity recording', () {
+    void mockLocationGranted(Stream<Position> stream) {
+      when(() => mockGeolocator.checkPermission())
+          .thenAnswer((_) async => LocationPermission.always);
+      when(() => mockGeolocator.getPositionStream(
+            locationSettings: any(named: 'locationSettings'),
+          )).thenAnswer((_) => stream);
+    }
+
+    testWidgets('should show record button after location loads',
+        (tester) async {
+      mockLocationGranted(Stream.value(_fakePosition()));
+
+      await tester.pumpWidget(const MyApp());
+      await tester.pump();
+
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+    });
+
+    testWidgets('should show REC indicator and stop button when recording starts',
+        (tester) async {
+      mockLocationGranted(Stream.value(_fakePosition()));
+
+      await tester.pumpWidget(const MyApp());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.stop), findsOneWidget);
+      expect(find.textContaining('REC'), findsOneWidget);
+    });
+
+    testWidgets('should show result card after stopping recording',
+        (tester) async {
+      final controller = StreamController<Position>();
+      mockLocationGranted(controller.stream);
+
+      await tester.pumpWidget(const MyApp());
+
+      controller.add(_fakePosition());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      expect(find.text('Activity Complete'), findsOneWidget);
+      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      await controller.close();
+    });
+
+    testWidgets('should accumulate non-zero distance during recording',
+        (tester) async {
+      final controller = StreamController<Position>();
+      mockLocationGranted(controller.stream);
+
+      await tester.pumpWidget(const MyApp());
+
+      controller.add(_fakePosition());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+
+      controller.add(Position(
+        latitude: 37.4229983,
+        longitude: -122.084,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      ));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      expect(find.text('0 m'), findsNothing);
+
+      await tester.pumpAndSettle();
+      await controller.close();
+    });
+
+    testWidgets('should start new activity when record button tapped after result',
+        (tester) async {
+      final controller = StreamController<Position>();
+      mockLocationGranted(controller.stream);
+
+      await tester.pumpWidget(const MyApp());
+
+      controller.add(_fakePosition());
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      expect(find.text('Activity Complete'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+
+      expect(find.text('Activity Complete'), findsNothing);
+      expect(find.byIcon(Icons.stop), findsOneWidget);
+      expect(find.textContaining('REC'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      await controller.close();
+    });
+
+    testWidgets('should not accumulate distance before recording starts',
+        (tester) async {
+      final controller = StreamController<Position>();
+      mockLocationGranted(controller.stream);
+
+      await tester.pumpWidget(const MyApp());
+
+      // Move around without starting recording
+      controller.add(_fakePosition());
+      await tester.pump();
+      controller.add(Position(
+        latitude: 37.4229983,
+        longitude: -122.084,
+        timestamp: DateTime.now(),
+        accuracy: 5.0,
+        altitude: 0.0,
+        heading: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+        altitudeAccuracy: 0.0,
+        headingAccuracy: 0.0,
+      ));
+      await tester.pump();
+
+      // Now start and immediately stop recording
+      await tester.tap(find.byIcon(Icons.play_arrow));
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.stop));
+      await tester.pump();
+
+      expect(find.text('0 m'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+      await controller.close();
+    });
+  });
+
   group('zoom animation', () {
     void mockLocationGranted() {
       when(() => mockGeolocator.checkPermission())
