@@ -49,6 +49,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   String? _errorMessage;
   StreamSubscription<Position>? _positionSubscription;
 
+  bool _followMarker = false;
+
   bool _isRecording = false;
   bool _showResult = false;
   double _activityDistanceMeters = 0.0;
@@ -108,14 +110,19 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _onLocationAnim() {
+    final newDisplayed = _locationTween.lerp(
+      Curves.easeInOut.transform(_locationAnimController.value),
+    );
     setState(() {
-      _displayedLocation = _locationTween.lerp(
-        Curves.easeInOut.transform(_locationAnimController.value),
-      );
+      _displayedLocation = newDisplayed;
     });
+    if (_followMarker) {
+      _mapController.move(newDisplayed, _mapController.camera.zoom);
+    }
   }
 
   void _centerOnPin() {
+    setState(() => _followMarker = true);
     _mapController.move(_currentLocation!, _mapController.camera.zoom);
   }
 
@@ -293,6 +300,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             options: MapOptions(
               initialCenter: _currentLocation!,
               initialZoom: 15.0,
+              onPositionChanged: (camera, hasGesture) {
+                if (hasGesture && _followMarker) {
+                  setState(() => _followMarker = false);
+                }
+              },
             ),
             children: [
               TileLayer(
@@ -440,7 +452,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                 FloatingActionButton.small(
                   heroTag: 'center_pin',
                   onPressed: _centerOnPin,
-                  child: const Icon(Icons.my_location),
+                  backgroundColor: _followMarker ? Colors.blue : null,
+                  child: Icon(
+                    Icons.my_location,
+                    color: _followMarker ? Colors.white : null,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 FloatingActionButton.small(
