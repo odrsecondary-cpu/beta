@@ -185,6 +185,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     return '${meters.toStringAsFixed(0)} m';
   }
 
+  String _formatSpeed(double meters, int seconds) {
+    if (seconds == 0) return '0.0 km/h';
+    final kmh = (meters / 1000) / (seconds / 3600);
+    return '${kmh.toStringAsFixed(1)} km/h';
+  }
+
   String _formatDuration(int seconds) {
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
@@ -407,6 +413,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                           ),
                           Text(
                             _formatDuration(_elapsedSeconds),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Text(
+                            _formatSpeed(_activityDistanceMeters, _elapsedSeconds),
                             style: const TextStyle(
                               fontSize: 16,
                               color: Colors.grey,
