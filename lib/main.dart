@@ -52,6 +52,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   bool _isRecording = false;
   bool _showResult = false;
   double _activityDistanceMeters = 0.0;
+  int _elapsedSeconds = 0;
+  Timer? _recordingTimer;
 
   static const _geoDistance = Distance();
 
@@ -92,6 +94,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _positionSubscription?.cancel();
+    _recordingTimer?.cancel();
     _zoomAnimController.dispose();
     _locationAnimController.dispose();
     super.dispose();
@@ -142,6 +145,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _startRecording() {
+    _elapsedSeconds = 0;
+    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() => _elapsedSeconds++);
+    });
     setState(() {
       _isRecording = true;
       _showResult = false;
@@ -151,6 +158,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   }
 
   void _stopRecording() {
+    _recordingTimer?.cancel();
+    _recordingTimer = null;
     setState(() {
       _isRecording = false;
       _showResult = true;
@@ -170,6 +179,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       return '${(meters / 1000).toStringAsFixed(2)} km';
     }
     return '${meters.toStringAsFixed(0)} m';
+  }
+
+  String _formatDuration(int seconds) {
+    final h = seconds ~/ 3600;
+    final m = (seconds % 3600) ~/ 60;
+    final s = seconds % 60;
+    if (h > 0) {
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    }
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   Future<void> _determinePosition() async {
@@ -333,7 +352,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'REC  ${_formatDistance(_activityDistanceMeters)}',
+                        'REC  ${_formatDistance(_activityDistanceMeters)}  ${_formatDuration(_elapsedSeconds)}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
